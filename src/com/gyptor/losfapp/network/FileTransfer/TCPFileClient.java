@@ -1,9 +1,6 @@
 package com.gyptor.losfapp.network.FileTransfer;
 
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 
 public class TCPFileClient {
@@ -13,11 +10,12 @@ public class TCPFileClient {
         int port = 5000;
 
         // file path
-        File folder = new File("D:/videos/");
+        File folder = new File("D:\\videos\\files for losfapp");
         File[] filesToSend = folder.listFiles(File::isFile); // lists all files. skips sub-folders
 
         try (Socket socket = new Socket(serverIp, port)) {
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
 
             // send number of files
             assert filesToSend != null;
@@ -27,6 +25,16 @@ public class TCPFileClient {
             for(File file : filesToSend){
                 dos.writeUTF(file.getName());
                 dos.writeLong(file.length());
+            }
+
+            // wait for server confirmation
+            String serverResponse = dis.readUTF();
+            if(!serverResponse.equalsIgnoreCase("Y")){
+                System.out.println("Server rejected the file transfer.");
+                dis.close();
+                dos.close();
+                socket.close();
+                return;
             }
 
             for (File file : filesToSend) {

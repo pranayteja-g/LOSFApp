@@ -1,9 +1,6 @@
 package com.gyptor.losfapp.network.FileTransfer;
 
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
@@ -21,6 +18,7 @@ public class TCPFileServer {
             System.out.println("client connected: " + socket.getInetAddress());
 
             DataInputStream dis = new DataInputStream(socket.getInputStream());
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
 
             // receive the number of files
             int fileCount = dis.readInt();
@@ -42,17 +40,26 @@ public class TCPFileServer {
             System.out.println("Accept these files? [Y/N]: ");
             String response = scaner.nextLine().trim();
 
+            dos.writeUTF(response);
+
             if(!response.equalsIgnoreCase("Y")){
                 System.out.println("Transfer rejected. closing connection");
                 dis.close();
+                dos.close();
                 socket.close();
                 return;
             }
 
             String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
             File batchFolder = new File("recievedFiles/recieved_" + timestamp);
-            if(!batchFolder.exists()){
-                batchFolder.mkdirs();
+            if (!batchFolder.exists()) {
+                if (!batchFolder.mkdirs()) {
+                    System.err.println("Failed to create directory: " + batchFolder.getAbsolutePath());
+                    dis.close();
+                    dos.close();
+                    socket.close();
+                    return;
+                }
             }
             System.out.println("Saving files to folder: " + batchFolder.getAbsolutePath());
 
