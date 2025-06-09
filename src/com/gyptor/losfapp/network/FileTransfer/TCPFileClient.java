@@ -1,17 +1,28 @@
 package com.gyptor.losfapp.network.FileTransfer;
 
+import javax.swing.*;
 import java.io.*;
 import java.net.Socket;
 
 public class TCPFileClient {
     public static void main(String[] args) {
-        String serverIp = "192.168.31.24";
-//        String serverIp = "localhost";
+//        String serverIp = "192.168.31.24";
+        String serverIp = "localhost";
         int port = 5000;
 
         // file path
-        File folder = new File("D:\\videos\\files for losfapp");
-        File[] filesToSend = folder.listFiles(File::isFile); // lists all files. skips sub-folders
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setMultiSelectionEnabled(true);
+        fileChooser.setDialogTitle("Select files to send");
+
+        int result = fileChooser.showOpenDialog(null);
+        if(result != JFileChooser.APPROVE_OPTION){
+            System.out.println("No files selected. Exiting...");
+            return;
+        }
+
+//        File[] filesToSend = folder.listFiles(File::isFile); // lists all files. skips sub-folders
+        File[] filesToSend = fileChooser.getSelectedFiles();
 
         try (Socket socket = new Socket(serverIp, port)) {
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
@@ -37,6 +48,7 @@ public class TCPFileClient {
                 return;
             }
 
+            // send files
             for (File file : filesToSend) {
                 // send bytes
                 FileInputStream fis = new FileInputStream(file);

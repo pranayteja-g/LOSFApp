@@ -20,17 +20,13 @@ public class Main {
 
         while (!exit) {
             System.out.println("\n --- LOSFApp menu ---");
-            System.out.println("1. Discover peers");
-            System.out.println("2. show discovered peers");
+            System.out.println("1. show discovered peers");
             System.out.println("0. exit");
             System.out.println("Choose an option: ");
             String choice = scanner.nextLine();
 
             switch (choice) {
                 case "1":
-                    discoveryService.broadcastPing();
-                    break;
-                case "2":
                     List<Peer> peers = discoveryService.getDiscoveredPeers();
                     if (peers.isEmpty()) {
                         System.out.println("No peers discovered yet.");

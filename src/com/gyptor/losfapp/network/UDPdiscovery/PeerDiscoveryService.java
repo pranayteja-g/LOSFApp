@@ -21,6 +21,7 @@ public class PeerDiscoveryService {
         this.selfIp = getLocalIpAddress();
         System.out.println("[DISCOVERY] Local IP: " + selfIp);
         startReceiver();
+        startperiodicBroadcaster();
     }
 
     private void startReceiver() {
@@ -88,6 +89,19 @@ public class PeerDiscoveryService {
         } catch (IOException e) {
             throw new RuntimeException("[DISCOVERY] Broadcast error: " + e.getMessage(), e);
         }
+    }
+
+    private void startperiodicBroadcaster(){
+        new Thread(() -> {
+           while(running){
+               broadcastPing();
+               try{
+                   Thread.sleep(5000); // wait 5 seconds before next ping
+               } catch (InterruptedException e){
+                   System.err.println("[DISCOVERY] Broadcaster interrupted: " + e.getMessage());
+               }
+           }
+        }, "DiscoveryBroadcaster").start();
     }
 
     public List<Peer> getDiscoveredPeers() {
