@@ -26,14 +26,14 @@ public class TCPFileServer {
             long[] fileSizes = new long[fileCount];
 
             // get filenames and sizes
-            for(int i = 0; i < fileCount; i++){
+            for (int i = 0; i < fileCount; i++) {
                 fileNames[i] = dis.readUTF();
                 fileSizes[i] = dis.readLong();
             }
 
             // Display to the user and ask for confirmation
             System.out.println("Files requested for transfer: ");
-            for(int i = 0; i < fileCount; i++){
+            for (int i = 0; i < fileCount; i++) {
                 System.out.println(" - " + fileNames[i] + " (" + fileSizes[i] + " bytes)");
             }
             Scanner scaner = new Scanner(System.in);
@@ -42,7 +42,7 @@ public class TCPFileServer {
 
             dos.writeUTF(response);
 
-            if(!response.equalsIgnoreCase("Y")){
+            if (!response.equalsIgnoreCase("Y")) {
                 System.out.println("Transfer rejected. closing connection");
                 dis.close();
                 dos.close();

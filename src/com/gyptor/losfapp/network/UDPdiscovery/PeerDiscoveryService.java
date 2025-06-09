@@ -7,7 +7,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 public class PeerDiscoveryService {
     private final int port = 8888;
@@ -15,7 +15,10 @@ public class PeerDiscoveryService {
     private final String RESPONSE_MSG = "LOSFAPP_RESPONSE";
     private final Map<String, Peer> discoveredPeers = new ConcurrentHashMap<>();
     private final String selfIp;
+    private final boolean DEBUG = false; // change to true when needed
     private boolean running = true;
+
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     public PeerDiscoveryService() {
         this.selfIp = getLocalIpAddress();
@@ -39,15 +42,15 @@ public class PeerDiscoveryService {
                     String senderIp = senderAddress.getHostAddress();
 
                     if (msg.equals(DISCOVERY_MSG)) {
-                        System.out.println("[DISCOVERY] Ping received from " + senderIp);
+                        if (DEBUG) System.out.println("[DISCOVERY] Ping received from " + senderIp);
 
                         // Discover peer from DISCOVERY message
                         if (!senderIp.equals(selfIp)) {
                             discoveredPeers.putIfAbsent(senderIp, new Peer(senderAddress));
                             discoveredPeers.get(senderIp).updateLastSeen();
-                            System.out.println("[DISCOVERY] Found peer: " + senderIp);
+                            if (DEBUG) System.out.println("[DISCOVERY] Found peer: " + senderIp);
                         } else {
-                            System.out.println("[DISCOVERY] Ignored self: " + senderIp);
+                            if (DEBUG) System.out.println("[DISCOVERY] Ignored self: " + senderIp);
                         }
 
                         // Send back RESPONSE
@@ -64,9 +67,9 @@ public class PeerDiscoveryService {
                         if (!senderIp.equals(selfIp)) {
                             discoveredPeers.putIfAbsent(senderIp, new Peer(senderAddress));
                             discoveredPeers.get(senderIp).updateLastSeen();
-                            System.out.println("[DISCOVERY] Found peer: " + senderIp);
+                            if (DEBUG) System.out.println("[DISCOVERY] Found peer: " + senderIp);
                         } else {
-                            System.out.println("[DISCOVERY] Ignored self: " + senderIp);
+                            if (DEBUG) System.out.println("[DISCOVERY] Ignored self: " + senderIp);
                         }
                     }
                 }
@@ -85,23 +88,18 @@ public class PeerDiscoveryService {
                     InetAddress.getByName("255.255.255.255"), port
             );
             socket.send(packet);
-            System.out.println("[DISCOVERY] Broadcast ping sent!");
+            if (DEBUG) System.out.println("[DISCOVERY] Broadcast ping sent!");
         } catch (IOException e) {
             throw new RuntimeException("[DISCOVERY] Broadcast error: " + e.getMessage(), e);
         }
     }
 
-    private void startperiodicBroadcaster(){
-        new Thread(() -> {
-           while(running){
-               broadcastPing();
-               try{
-                   Thread.sleep(5000); // wait 5 seconds before next ping
-               } catch (InterruptedException e){
-                   System.err.println("[DISCOVERY] Broadcaster interrupted: " + e.getMessage());
-               }
-           }
-        }, "DiscoveryBroadcaster").start();
+    private void startperiodicBroadcaster() {
+        scheduler.scheduleAtFixedRate(() -> {
+            if (running){
+                broadcastPing();
+            }
+        }, 0, 5, TimeUnit.SECONDS);
     }
 
     public List<Peer> getDiscoveredPeers() {
@@ -110,6 +108,7 @@ public class PeerDiscoveryService {
 
     public void stop() {
         running = false;
+        scheduler.shutdownNow();
     }
 
     private String getLocalIpAddress() {

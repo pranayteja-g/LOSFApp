@@ -1,22 +1,76 @@
 package com.gyptor.losfapp.network.FileTransfer;
 
+import com.gyptor.losfapp.network.UDPdiscovery.Peer;
+import com.gyptor.losfapp.network.UDPdiscovery.PeerDiscoveryService;
+
 import javax.swing.*;
 import java.io.*;
 import java.net.Socket;
+import java.util.List;
 
 public class TCPFileClient {
     public static void main(String[] args) {
+
+        PeerDiscoveryService discoveryService = new PeerDiscoveryService();
+
+        // wait a few seconds for peer discovery
+        System.out.println("waiting 5 seconds to discover peers");
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException ignored) {
+        }
+
+        List<Peer> peers = discoveryService.getDiscoveredPeers();
+        if (peers.isEmpty()) {
+            System.out.println("No peers discovered. Exiting...");
+            return;
+        }
+
+        // display peers
+        System.out.println("Discovered peers");
+        for (int i = 0; i < peers.size(); i++) {
+            System.out.println((i + 1) + ". " + peers.get(i).getAddress().getHostAddress());
+        }
+
+        // let user select
+        String[] peerIps = peers.stream()
+                .map(p -> p.getAddress().getHostAddress())
+                .toArray(String[]::new);
+
+        String selectedPeer = (String) JOptionPane.showInputDialog(
+                null,
+                "Select a peer to send file to",
+                "peer Selection",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                peerIps,
+                peerIps[0]
+        );
+
+        if (selectedPeer == null || selectedPeer.isEmpty()) {
+            System.out.println("no peer selected.exiting");
+            return;
+        }
+
 //        String serverIp = "192.168.31.24";
-        String serverIp = "localhost";
         int port = 5000;
+
+        // a temporary JFrame just to own the dialog
+        JFrame dummyFrame = new JFrame();
+        dummyFrame.setAlwaysOnTop(true);  // makes sure the dialog is on top
+        dummyFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        dummyFrame.setUndecorated(true);  // Optional: hide window borders
+        dummyFrame.setLocationRelativeTo(null); // Center it
+        dummyFrame.setVisible(true);
 
         // file path
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setMultiSelectionEnabled(true);
         fileChooser.setDialogTitle("Select files to send");
 
-        int result = fileChooser.showOpenDialog(null);
-        if(result != JFileChooser.APPROVE_OPTION){
+        int result = fileChooser.showOpenDialog(dummyFrame);
+        dummyFrame.dispose();
+        if (result != JFileChooser.APPROVE_OPTION) {
             System.out.println("No files selected. Exiting...");
             return;
         }
@@ -24,7 +78,7 @@ public class TCPFileClient {
 //        File[] filesToSend = folder.listFiles(File::isFile); // lists all files. skips sub-folders
         File[] filesToSend = fileChooser.getSelectedFiles();
 
-        try (Socket socket = new Socket(serverIp, port)) {
+        try (Socket socket = new Socket(selectedPeer, port)) {
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
             DataInputStream dis = new DataInputStream(socket.getInputStream());
 
@@ -33,14 +87,14 @@ public class TCPFileClient {
             dos.writeInt(filesToSend.length);
 
             // send all metadata first
-            for(File file : filesToSend){
+            for (File file : filesToSend) {
                 dos.writeUTF(file.getName());
                 dos.writeLong(file.length());
             }
 
             // wait for server confirmation
             String serverResponse = dis.readUTF();
-            if(!serverResponse.equalsIgnoreCase("Y")){
+            if (!serverResponse.equalsIgnoreCase("Y")) {
                 System.out.println("Server rejected the file transfer.");
                 dis.close();
                 dos.close();
@@ -66,7 +120,7 @@ public class TCPFileClient {
             dos.flush();
             System.out.println("all files sent.");
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.err.println("Failed to connect to " + selectedPeer + " on port " + port + " " + e.getMessage());
         }
     }
 }
