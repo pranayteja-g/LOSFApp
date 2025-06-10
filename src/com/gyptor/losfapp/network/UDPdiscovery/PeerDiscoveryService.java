@@ -7,7 +7,10 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class PeerDiscoveryService {
     private final int port = 8888;
@@ -16,9 +19,8 @@ public class PeerDiscoveryService {
     private final Map<String, Peer> discoveredPeers = new ConcurrentHashMap<>();
     private final String selfIp;
     private final boolean DEBUG = false; // change to true when needed
-    private boolean running = true;
-
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private boolean running = true;
 
     public PeerDiscoveryService() {
         this.selfIp = getLocalIpAddress();
@@ -96,7 +98,7 @@ public class PeerDiscoveryService {
 
     private void startperiodicBroadcaster() {
         scheduler.scheduleAtFixedRate(() -> {
-            if (running){
+            if (running) {
                 broadcastPing();
             }
         }, 0, 5, TimeUnit.SECONDS);

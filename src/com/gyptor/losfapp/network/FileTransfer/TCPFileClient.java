@@ -88,7 +88,8 @@ public class TCPFileClient {
 
             // send all metadata first
             for (File file : filesToSend) {
-                dos.writeUTF(file.getName());
+                String cleanFileName = file.getName().replaceAll("[\\\\\\\\/:*?\\\"<>|]", "_");
+                dos.writeUTF(cleanFileName);
                 dos.writeLong(file.length());
             }
 
@@ -108,9 +109,17 @@ public class TCPFileClient {
                 FileInputStream fis = new FileInputStream(file);
                 byte[] buffer = new byte[8192];
                 int bytesRead;
+                long totalSent = 0;
+                long fileSize = file.length();
+
+                System.out.println("Sending: " + file.getName() + " (" + fileSize + " bytes");
 
                 while ((bytesRead = fis.read(buffer)) != -1) {
                     dos.write(buffer, 0, bytesRead);
+                    totalSent += bytesRead;
+
+                    int progress = (int) ((totalSent * 100) / fileSize);
+                    System.out.print("\rProgress: " + progress + "%");
                 }
 
                 fis.close();
