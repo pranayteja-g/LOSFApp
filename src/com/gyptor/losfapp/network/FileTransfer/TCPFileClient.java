@@ -2,6 +2,7 @@ package com.gyptor.losfapp.network.FileTransfer;
 
 import com.gyptor.losfapp.network.UDPdiscovery.Peer;
 import com.gyptor.losfapp.network.UDPdiscovery.PeerDiscoveryService;
+import com.gyptor.losfapp.ui.TransferProgressWindow;
 
 import javax.swing.*;
 import java.io.*;
@@ -75,7 +76,8 @@ public class TCPFileClient {
             return;
         }
 
-//        File[] filesToSend = folder.listFiles(File::isFile); // lists all files. skips sub-folders
+        TransferProgressWindow progressWindow = new TransferProgressWindow("Sending Files");
+//      File[] filesToSend = folder.listFiles(File::isFile); // lists all files. skips sub-folders
         File[] filesToSend = fileChooser.getSelectedFiles();
 
         try (Socket socket = new Socket(selectedPeer, port)) {
@@ -104,7 +106,13 @@ public class TCPFileClient {
             }
 
             // send files
-            for (File file : filesToSend) {
+            for (int i = 0; i < filesToSend.length; i++) {
+                File file = filesToSend[i];
+                long filesSize = file.length();
+
+                progressWindow.updateFile(i + 1, filesToSend.length, file.getName());
+                progressWindow.updateStatus("sending...");
+
                 // send bytes
                 FileInputStream fis = new FileInputStream(file);
                 byte[] buffer = new byte[8192];
@@ -119,17 +127,24 @@ public class TCPFileClient {
                     totalSent += bytesRead;
 
                     int progress = (int) ((totalSent * 100) / fileSize);
+                    SwingUtilities.invokeLater(() -> progressWindow.updateProgress(progress));
                     System.out.print("\rProgress: " + progress + "%");
                 }
 
                 fis.close();
-                System.out.println("sent file: " + file.getName());
+                progressWindow.updateStatus("sent: " + file.getName());
+                Thread.sleep(400);
+//                System.out.println("sent file: " + file.getName());
             }
 
             dos.flush();
+            progressWindow.finish();
+            progressWindow.dispose();
             System.out.println("all files sent.");
         } catch (IOException e) {
             System.err.println("Failed to connect to " + selectedPeer + " on port " + port + " " + e.getMessage());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 }

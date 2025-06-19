@@ -1,7 +1,9 @@
 package com.gyptor.losfapp.network.FileTransfer;
 
 import com.gyptor.losfapp.network.UDPdiscovery.ServerAnnouncer;
+import com.gyptor.losfapp.ui.TransferProgressWindow;
 
+import javax.swing.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -36,15 +38,24 @@ public class TCPFileServer {
                 fileSizes[i] = dis.readLong();
             }
 
-            // Display to the user and ask for confirmation
-            System.out.println("Files requested for transfer: ");
+            // Display to the user and ask for confirmation using JOptionPane
+            StringBuilder confirmationMsg = new StringBuilder("Incoming File:\n");
+//            System.out.println("Files requested for transfer: ");
             for (int i = 0; i < fileCount; i++) {
-                System.out.println(" - " + fileNames[i] + " (" + fileSizes[i] + " bytes)");
+                confirmationMsg.append(".").append(fileNames[i])
+                                .append(" (").append(fileSizes[i]).append(" bytes)\n");
+//                System.out.println(" - " + fileNames[i] + " (" + fileSizes[i] + " bytes)");
             }
-            Scanner scaner = new Scanner(System.in);
-            System.out.println("Accept these files? [Y/N]: ");
-            String response = scaner.nextLine().trim();
+            confirmationMsg.append("\nDo you want to accept these files?");
 
+            int option = JOptionPane.showConfirmDialog(null,
+                    confirmationMsg.toString(),
+                    "Incoming file request",
+                    JOptionPane.YES_NO_OPTION);
+//            Scanner scaner = new Scanner(System.in);
+//            System.out.println("Accept these files? [Y/N]: ");
+//            String response = scaner.nextLine().trim();
+            String response = (option == JOptionPane.YES_OPTION) ? "Y" : "N";
             dos.writeUTF(response);
 
             if (!response.equalsIgnoreCase("Y")) {
@@ -55,6 +66,7 @@ public class TCPFileServer {
                 return;
             }
 
+            // prepare to receive files
             String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
             File batchFolder = new File("recievedFiles/recieved_" + timestamp);
             if (!batchFolder.exists()) {
@@ -68,11 +80,16 @@ public class TCPFileServer {
             }
             System.out.println("Saving files to folder: " + batchFolder.getAbsolutePath());
 
+            TransferProgressWindow progressWindow = new TransferProgressWindow("Receiving files");
+
             // accepting and saving files
             for (int i = 0; i < fileCount; i++) {
                 String fileName = fileNames[i].replaceAll("[\\\\/:*?\"<>|]", "_");
                 long fileSize = fileSizes[i];
                 System.out.println("Receiving file: " + fileName + " | size: " + fileSize);
+
+                progressWindow.updateFile(i+1, fileCount, fileName);
+                progressWindow.updateStatus("Receiving...");
 
                 // save to disk
                 File outputFile = new File(batchFolder, fileName);
@@ -98,19 +115,27 @@ public class TCPFileServer {
                     totalRead += bytesRead;
 
                     int progress = (int) ((totalRead * 100) / fileSize);
+                    int finalProgress = progress;
+                    SwingUtilities.invokeLater(() -> progressWindow.updateProgress(finalProgress));
                     System.out.print("\rProgress: " + progress + "%");
                 }
 
 
                 fos.close();
+                progressWindow.updateStatus("Received: " + fileName);
+                Thread.sleep(400);
                 System.out.println("\rProgress: 100%");
                 System.out.println("File received succesfully as: " + outputFile.getName());
 
             }
+
+            progressWindow.finish();
+            JOptionPane.showMessageDialog(null, "All files received successfully!");
+
             announcer.stopAnnouncing();
             dis.close();
             socket.close();
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
