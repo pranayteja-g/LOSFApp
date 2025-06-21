@@ -2,6 +2,7 @@ package com.gyptor.losfapp.network.FileTransfer;
 
 import com.gyptor.losfapp.network.UDPdiscovery.ServerAnnouncer;
 import com.gyptor.losfapp.ui.TransferProgressWindow;
+import com.gyptor.losfapp.util.UILogger;
 
 import javax.swing.*;
 import java.io.*;
@@ -9,7 +10,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Scanner;
 
 public class TCPFileServer {
     public static void main(String[] args) {
@@ -19,10 +19,10 @@ public class TCPFileServer {
         announcer.start();
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("server started, waiting on port " + port + "...");
+            UILogger.log("server started, waiting on port " + port + "...");
 
             Socket socket = serverSocket.accept();
-            System.out.println("client connected: " + socket.getInetAddress());
+            UILogger.log("client connected: " + socket.getInetAddress());
 
             DataInputStream dis = new DataInputStream(socket.getInputStream());
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
@@ -43,7 +43,7 @@ public class TCPFileServer {
 //            System.out.println("Files requested for transfer: ");
             for (int i = 0; i < fileCount; i++) {
                 confirmationMsg.append(".").append(fileNames[i])
-                                .append(" (").append(fileSizes[i]).append(" bytes)\n");
+                        .append(" (").append(fileSizes[i]).append(" bytes)\n");
 //                System.out.println(" - " + fileNames[i] + " (" + fileSizes[i] + " bytes)");
             }
             confirmationMsg.append("\nDo you want to accept these files?");
@@ -68,7 +68,7 @@ public class TCPFileServer {
 
             // prepare to receive files
             String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
-            File batchFolder = new File("recievedFiles/recieved_" + timestamp);
+            File batchFolder = new File("receivedFiles/received_" + timestamp);
             if (!batchFolder.exists()) {
                 if (!batchFolder.mkdirs()) {
                     System.err.println("Failed to create directory: " + batchFolder.getAbsolutePath());
@@ -78,7 +78,7 @@ public class TCPFileServer {
                     return;
                 }
             }
-            System.out.println("Saving files to folder: " + batchFolder.getAbsolutePath());
+            UILogger.log("Saving files to folder: " + batchFolder.getAbsolutePath());
 
             TransferProgressWindow progressWindow = new TransferProgressWindow("Receiving files");
 
@@ -86,9 +86,9 @@ public class TCPFileServer {
             for (int i = 0; i < fileCount; i++) {
                 String fileName = fileNames[i].replaceAll("[\\\\/:*?\"<>|]", "_");
                 long fileSize = fileSizes[i];
-                System.out.println("Receiving file: " + fileName + " | size: " + fileSize);
+                UILogger.log("Receiving file: " + fileName + " | size: " + fileSize);
 
-                progressWindow.updateFile(i+1, fileCount, fileName);
+                progressWindow.updateFile(i + 1, fileCount, fileName);
                 progressWindow.updateStatus("Receiving...");
 
                 // save to disk
@@ -107,11 +107,11 @@ public class TCPFileServer {
 
                     bytesRead = dis.read(buffer, 0, chunkSize);
                     if (bytesRead == -1) {
-                        System.out.println("unexpected end of stream. file may be incomplete.");
+                        UILogger.log("unexpected end of stream. file may be incomplete.");
                         break;
                     }
 
-                    fos.write(buffer, 0, chunkSize);
+                    fos.write(buffer, 0, chunkSize); //chunkSize
                     totalRead += bytesRead;
 
                     int progress = (int) ((totalRead * 100) / fileSize);
@@ -125,17 +125,19 @@ public class TCPFileServer {
                 progressWindow.updateStatus("Received: " + fileName);
                 Thread.sleep(400);
                 System.out.println("\rProgress: 100%");
-                System.out.println("File received succesfully as: " + outputFile.getName());
+                UILogger.log("File received succesfully as: " + outputFile.getName());
 
             }
 
             progressWindow.finish();
             JOptionPane.showMessageDialog(null, "All files received successfully!");
+            UILogger.log("All files received successfully");
 
             announcer.stopAnnouncing();
             dis.close();
             socket.close();
         } catch (IOException | InterruptedException e) {
+            UILogger.log("Error: " + e.getMessage());
             throw new RuntimeException(e);
         }
     }

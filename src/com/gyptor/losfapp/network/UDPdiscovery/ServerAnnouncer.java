@@ -1,29 +1,31 @@
 package com.gyptor.losfapp.network.UDPdiscovery;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 
-public class ServerAnnouncer extends Thread{
+public class ServerAnnouncer extends Thread {
     private final int port;
     private volatile boolean running = true;
 
-    public ServerAnnouncer(int port){
+    public ServerAnnouncer(int port) {
         this.port = port;
     }
 
-    public void stopAnnouncing(){
+    public void stopAnnouncing() {
         running = false;
     }
 
     @Override
-    public void run(){
-        try (DatagramSocket socket = new DatagramSocket()){
+    public void run() {
+        try (DatagramSocket socket = new DatagramSocket()) {
             socket.setBroadcast(true);
             String localIp = InetAddress.getLocalHost().getHostAddress();
             String message = "LOSFAPP_RESPONSE";
             byte[] buffer = message.getBytes();
 
-            while (running){
+            while (running) {
                 DatagramPacket packet = new DatagramPacket(
                         buffer,
                         buffer.length,

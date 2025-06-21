@@ -13,8 +13,7 @@ public class TransferProgressWindow extends JFrame {
 
     public TransferProgressWindow(String title) {
         setTitle(title);
-        setSize(400, 150);
-        setLayout(new GridLayout(4,1));
+        setSize(400, 200);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -28,10 +27,11 @@ public class TransferProgressWindow extends JFrame {
         homeButton.setVisible(false); // initially hidden
         homeButton.addActionListener(e -> {
             this.dispose();
-            new com.gyptor.losfapp.gui.HomeWindow().setVisible(true); // reopen home
+            new com.gyptor.losfapp.gui.MainWindow().setVisible(true); // reopen home
         });
 
-        JPanel centerPanel = new JPanel(new GridLayout(4,1,10,5));
+        JPanel centerPanel = new JPanel(new GridLayout(4, 1, 10, 5));
+        centerPanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
         centerPanel.add(fileIndexLabel);
         centerPanel.add(fileLabel);
@@ -43,21 +43,21 @@ public class TransferProgressWindow extends JFrame {
         setVisible(true);
     }
 
-    public void updateFile(int index, int total, String fileName){
+    public void updateFile(int index, int total, String fileName) {
         fileIndexLabel.setText("File " + index + " of " + total);
         fileLabel.setText("File: " + fileName);
         updateProgress(0);
     }
 
-    public void updateProgress(int percent){
+    public void updateProgress(int percent) {
         progressBar.setValue(percent);
     }
 
-    public void updateStatus(String status){
+    public void updateStatus(String status) {
         statusLabel.setText("Status: " + status);
     }
 
-    public void finish(){
+    public void finish() {
         updateStatus("Done 👍");
     }
 }
